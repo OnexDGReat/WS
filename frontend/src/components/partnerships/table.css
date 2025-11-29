@@ -1,0 +1,117 @@
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* Table styling */
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+  font-family: "Inter", sans-serif;
+}
+
+.custom-table th {
+  background: linear-gradient(90deg, #7a0019, #0054a6);
+  color: #fff;
+  padding: 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+}
+
+.custom-table td {
+  padding: 14px;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 0.92rem;
+  color: #333;
+}
+
+/* Row hover */
+.custom-table tr:hover {
+  background: rgba(122, 0, 25, 0.05);
+}
+
+/* Status badges inside table */
+.status {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+  min-width: 80px;
+  text-align: center;
+}
+
+.status.active {
+  background: #d1fde3;
+  color: #008c2e;
+}
+
+.status.expired {
+  background: #ffd6d6;
+  color: #b30000;
+}
+
+.status.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+/* No data row */
+.no-data {
+  text-align: center;
+  padding: 20px;
+  color: #888;
+  font-style: italic;
+}
+
+/* Actions buttons in table */
+.actions a,
+.delete-btn {
+  font-weight: 500;
+  margin-right: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.view-btn {
+  color: #0054a6;
+}
+
+.view-btn:hover {
+  text-decoration: underline;
+}
+
+.edit-btn {
+  color: #7a0019;
+}
+
+.edit-btn:hover {
+  text-decoration: underline;
+}
+
+.delete-btn {
+  background: transparent;
+  border: none;
+  color: #cc0000;
+}
+
+.delete-btn:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .custom-table th,
+  .custom-table td {
+    font-size: 0.85rem;
+    padding: 12px;
+  }
+}

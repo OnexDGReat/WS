@@ -6,6 +6,7 @@ import {
   Menu,
   ChartColumnBig,
   Handshake,
+  School,
   FileChartColumn,
   Settings,
   LogOut
@@ -38,6 +39,7 @@ export default function Sidebar() {
   const navItems = [
     { name: "Dashboard", path: "/dashboard", icon: <ChartColumnBig /> },
     { name: "Partnerships", path: "/partnerships", icon: <Handshake /> },
+    { name: "Colleges", path: "/colleges", icon: <School /> },
     { name: "Reports", path: "/reports", icon: <FileChartColumn /> },
     { name: "Settings", path: "/settings", icon: <Settings /> }
   ];

@@ -1,0 +1,18 @@
+.content {
+  padding: 30px;
+  width: 100%;
+}
+
+/* Add some spacing under header and button */
+.btn-container {
+  margin: 10px 0 30px 0;
+}
+
+/* Optional: page-specific tweaks for Colleges */
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 1px 1px 4px rgba(0,0,0,0.6);
+  margin-bottom: 25px;
+}

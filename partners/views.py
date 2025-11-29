@@ -1,30 +1,56 @@
 from rest_framework import viewsets
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import authenticate, login, logout
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework.decorators import api_view
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie, csrf_protect
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 import json
+from rest_framework.permissions import IsAuthenticated
 
-from .models import Partner, User
-from .serializers import PartnerSerializer
+from .models import Partner, PartnerContact, PartnershipActivity, User
+from .serializers import (
+    PartnerSerializer,
+    PartnerContactSerializer,
+    PartnershipActivitySerializer
+)
 
-
-# -----------------------------
-# Partner API
-# -----------------------------
+# =====================================================
+# PARTNER CRUD API (Fully CSRF-compatible)
+# =====================================================
 class PartnerViewSet(viewsets.ModelViewSet):
-    queryset = Partner.objects.all()
+    queryset = Partner.objects.all().order_by("-created_at")
     serializer_class = PartnerSerializer
 
 
-# -----------------------------
-# Basic pages / current user
-# -----------------------------
+class PartnerContactViewSet(viewsets.ModelViewSet):
+    queryset = PartnerContact.objects.all()
+    serializer_class = PartnerContactSerializer
+
+
+class PartnershipActivityViewSet(viewsets.ModelViewSet):
+    queryset = PartnershipActivity.objects.all()
+    serializer_class = PartnershipActivitySerializer
+
+
+# =====================================================
+# CSRF COOKIE ENDPOINT
+# React must call this ONCE to receive a CSRF token.
+# =====================================================
+@ensure_csrf_cookie
+def get_csrf(request):
+    return JsonResponse({"detail": "CSRF cookie set"})
+
+
+# =====================================================
+# HOME TEST PAGE
+# =====================================================
 def home(request):
     return HttpResponse("Welcome to the OSA Partnership Monitoring System!")
 
 
+# =====================================================
+# Current User
+# =====================================================
 def current_user(request):
     if request.user.is_authenticated:
         return JsonResponse({
@@ -37,30 +63,25 @@ def current_user(request):
     return JsonResponse({"error": "Not logged in"}, status=401)
 
 
-
-# -----------------------------
-# Authentication: Signup
-# -----------------------------
-@csrf_exempt
+# =====================================================
+# SIGNUP
+# =====================================================
+@csrf_exempt     # we intentionally exempt this (login/signup)
 def signup_view(request):
     if request.method != "POST":
         return JsonResponse({"success": False, "error": "Invalid method"}, status=400)
 
     try:
         data = json.loads(request.body)
-        email = data.get("email")
-        password = data.get("password")
-        fullname = data.get("fullname", "")
-        position = data.get("position", "")
 
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email=data.get("email")).exists():
             return JsonResponse({"success": False, "error": "User already exists"})
 
-        user = User.objects.create_user(
-            email=email,
-            password=password,
-            fullname=fullname,
-            position=position
+        User.objects.create_user(
+            email=data.get("email"),
+            password=data.get("password"),
+            fullname=data.get("fullname", ""),
+            position=data.get("position", "")
         )
 
         return JsonResponse({"success": True})
@@ -69,21 +90,22 @@ def signup_view(request):
         return JsonResponse({"success": False, "error": str(e)})
 
 
-# -----------------------------
-# Authentication: Login
-# -----------------------------
-@csrf_exempt
+# =====================================================
+# LOGIN
+# =====================================================
+@csrf_exempt     # login doesn't require CSRF
 def login_view(request):
     if request.method != "POST":
         return JsonResponse({"success": False, "error": "Invalid method"}, status=400)
 
     try:
         data = json.loads(request.body)
-        email = data.get("email")
-        password = data.get("password")
 
-        user = authenticate(request, username=email, password=password)
-
+        user = authenticate(
+            request,
+            username=data.get("email"),
+            password=data.get("password")
+        )
 
         if user:
             login(request, user)
@@ -102,14 +124,11 @@ def login_view(request):
         return JsonResponse({"success": False, "error": str(e)})
 
 
-# -----------------------------
-# Authentication: Logout
-# -----------------------------
-@api_view(["GET", "POST"])
+# =====================================================
+# LOGOUT
+# =====================================================
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def logout_view(request):
-    """
-    Logs the user out by clearing the session.
-    GET allowed so the user can also visit /logout/ manually for testing.
-    """
-    logout(request)  # destroys session
-    return Response({"success": True, "message": "Logged out"}, status=200)
+    request.user.auth_token.delete()  # if using token auth
+    return Response({"detail": "Successfully logged out"})
