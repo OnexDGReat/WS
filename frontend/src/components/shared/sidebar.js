@@ -8,7 +8,7 @@ import {
   Handshake,
   School,
   Users,
-  LogOut
+  Phone
 } from "lucide-react";
 
 import "./sidebar.css";
@@ -25,22 +25,19 @@ export default function Sidebar() {
       .catch(() => (window.location.href = "/login"));
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await axiosInstance.get("logout/");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
-    } catch (err) {
-      console.error("Logout failed:", err);
-    }
-  };
-
-  const navItems = [
+  // Base nav items visible to all roles
+  const baseNavItems = [
     { name: "Dashboard", path: "/dashboard", icon: <ChartColumnBig /> },
     { name: "Partnerships", path: "/partnerships", icon: <Handshake /> },
     { name: "Colleges", path: "/colleges", icon: <School /> },
-    { name: "Contact", path: "/contact", icon: <Users /> }
+    { name: "Contacts", path: "/contact", icon: <Phone /> },
   ];
+
+  // Users tab only for superadmin
+  const superadminNavItem = { name: "Users", path: "/users", icon: <Users /> };
+
+  // Combine nav items based on role
+  const navItems = user?.role === "superadmin" ? [...baseNavItems, superadminNavItem] : baseNavItems;
 
   return (
     <div className={collapsed ? "sidebar collapsed" : "sidebar"}>
@@ -66,11 +63,11 @@ export default function Sidebar() {
             {user && (
               <div className="user-info under-logo">
                 <h3>{user.fullname}</h3>
-
                 <p>
                   {user.role === "superadmin" && "Superadmin"}
-                  {user.role === "college_admin" && `${user.college} Admin`}
-                  {user.role === "department_admin" && `${user.department} Admin`}
+                  {user.role === "college_admin" && `${user.college?.name || "College"} Admin`}
+                  {user.role === "department_admin" && `${user.department?.name || "Department"} Admin`}
+                  {(user.role === "user" || user.role === "guest") && "User"}
                 </p>
               </div>
             )}
@@ -97,7 +94,6 @@ export default function Sidebar() {
             </Link>
           </li>
         ))}
-
       </ul>
     </div>
   );

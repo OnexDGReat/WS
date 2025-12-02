@@ -18,6 +18,7 @@ router = DefaultRouter()
 router.register(r'partners', PartnerViewSet)
 router.register(r'partner-contacts', PartnerContactViewSet)
 router.register(r'partner-activities', PartnershipActivityViewSet)
+router.register(r'users', views.UserViewSet)
 
 # -----------------------------
 # URL Patterns
@@ -27,6 +28,7 @@ urlpatterns = [
     path("signup/", signup_view, name="signup"),
     path("login/", login_view, name="login"),
     path("logout/", logout_view, name="logout"),
+    path("users/", views.get_all_users, name="get_all_users"),
     path("current_user/", current_user, name="current_user"),
 
     # PARTNERS API
@@ -41,6 +43,8 @@ urlpatterns = [
     path("api/colleges/", views.all_colleges_api, name="colleges_api"),
     path("all_colleges_api/", views.all_colleges_api, name="all_colleges_api"),
 
-    path('colleges/', views.get_colleges),
-    path('courses/', views.get_courses),
+    path("colleges/", views.college_list, name="college-list"),
+    path("departments/", views.department_list, name="department-list"),
+
+    
 ]

@@ -8,6 +8,7 @@ import Partnerships from "./components/partnerships/partnerships";
 import Colleges from "./components/colleges/colleges";
 import Reports from "./components/reports/reports";
 import Contacts from "./components/contact/contact";
+import Users from "./components/users/users";
 
 
 import AddPartnership from "./components/partnerships/add_partnership";
@@ -24,6 +25,7 @@ function App() {
         <Route path="/colleges" element={<Colleges />} />
         <Route path="/reports" element={<Reports />} />       {/* No function yet can delete later */}
         <Route path="/contact" element={<Contacts />} />
+        <Route path="/users" element={<Users />} />
 
 
         {/* NEW ROUTES HERE */}

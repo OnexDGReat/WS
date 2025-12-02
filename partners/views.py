@@ -7,15 +7,20 @@ from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 import json
-from .models import Department, Partner, College
 from .serializers import CollegeSerializer, DepartmentSerializer
 
-from .models import Partner, PartnerContact, PartnershipActivity, User
+from .models import Partner, PartnerContact, PartnershipActivity, User, College, Department
 from .serializers import (
     PartnerSerializer,
     PartnerContactSerializer,
-    PartnershipActivitySerializer
+    PartnershipActivitySerializer,
+    UserListSerializer,
+    UserSerializer,
+    CollegeSerializer,
+    DepartmentSerializer,
+    UserSerializer
 )
+from .permissions import IsSuperAdmin
 
 # =====================================================
 # PARTNER CRUD API (Fully CSRF-compatible)
@@ -225,4 +230,53 @@ def get_courses(request):
         return Response([], status=200)
     courses = Department.objects.filter(college_id=college_id)
     serializer = DepartmentSerializer(courses, many=True)
+    return Response(serializer.data)
+
+@api_view(["GET"])
+def get_all_users(request):
+    users = User.objects.all().order_by("fullname")
+    serializer = UserListSerializer(users, many=True)
+    return Response(serializer.data)
+
+# =====================================================
+# USERS CRUD (Superadmin only)
+# =====================================================
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all().order_by("-id")
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated, IsSuperAdmin]
+
+# =====================================================
+# Colleges list
+# =====================================================
+@api_view(["GET"])
+def college_list(request):
+    colleges = College.objects.all()
+    serializer = CollegeSerializer(colleges, many=True)
+    return Response(serializer.data)
+
+
+# =====================================================
+# Departments list filtered by college
+# =====================================================
+@api_view(["GET"])
+def department_list(request):
+    college_id = request.GET.get("college_id")
+    if college_id:
+        departments = Department.objects.filter(college_id=college_id)
+    else:
+        departments = Department.objects.none()
+    serializer = DepartmentSerializer(departments, many=True)
+    return Response(serializer.data)
+
+
+# =====================================================
+# Users list for superadmin only
+# =====================================================
+@api_view(["GET"])
+def user_list(request):
+    if not request.user.is_authenticated or request.user.role != "superadmin":
+        return Response({"detail": "Not authorized"}, status=403)
+    users = User.objects.all().order_by("fullname")
+    serializer = UserListSerializer(users, many=True)
     return Response(serializer.data)

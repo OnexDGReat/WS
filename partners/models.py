@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
+
 # =====================================================
 # College Model
 # =====================================================
@@ -26,16 +27,31 @@ class Department(models.Model):
 # Custom User Manager
 # =====================================================
 class UserManager(BaseUserManager):
-    def create_user(self, email, password=None, fullname="", role="superadmin", college=None, department=None, **extra_fields):
+
+    def create_user(
+        self,
+        email,
+        password=None,
+        fullname="",
+        role="user",
+        college=None,
+        department=None,
+        **extra_fields
+    ):
         if not email:
             raise ValueError("Users must have an email address")
 
         email = self.normalize_email(email)
 
+        # Default fallback values
         if college is None:
             college, _ = College.objects.get_or_create(name="Not mentioned")
+
         if department is None:
-            department, _ = Department.objects.get_or_create(name="Not mentioned", college=college)
+            department, _ = Department.objects.get_or_create(
+                name="Not mentioned",
+                college=college
+            )
 
         user = self.model(
             email=email,
@@ -53,35 +69,49 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
-        return self.create_user(email=email, password=password, role="superadmin", **extra_fields)
 
+        return self.create_user(
+            email=email,
+            password=password,
+            role="superadmin",
+            **extra_fields
+        )
 
 
 # =====================================================
 # Custom User Model
 # =====================================================
 class User(AbstractBaseUser, PermissionsMixin):
+
     ROLE_CHOICES = (
         ("superadmin", "Superadmin"),
         ("college_admin", "College Admin"),
         ("department_admin", "Department Admin"),
+        ("user", "Student / User"),
+        ("guest", "Guest"),
     )
 
     email = models.EmailField(unique=True)
     fullname = models.CharField(max_length=255, blank=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="superadmin")
+
+    # Role-based access
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="user")
+
+    # Academic attribution
     college = models.ForeignKey(College, on_delete=models.SET_NULL, null=True, blank=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
-    username = None
+
+    username = None  # we are using email as username
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+
     objects = UserManager()
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
     def __str__(self):
-        return self.email
+        return f"{self.fullname} ({self.email})"
 
 
 # =====================================================
@@ -90,23 +120,29 @@ class User(AbstractBaseUser, PermissionsMixin):
 class Partner(models.Model):
     company1 = models.CharField(max_length=255)
     college1 = models.CharField(max_length=255, blank=True, null=True)
+
     company2 = models.CharField(max_length=255, blank=True, null=True)
     college2 = models.CharField(max_length=255, blank=True, null=True)
+
     contact1_name = models.CharField(max_length=255)
     contact1_email = models.EmailField()
     contact1_phone = models.CharField(max_length=50, default="0000000000")
+
     contact2_name = models.CharField(max_length=255, blank=True, null=True)
     contact2_email = models.EmailField(blank=True, null=True)
     contact2_phone = models.CharField(max_length=50, blank=True, null=True)
+
     effectivity_start = models.DateField()
     effectivity_end = models.DateField()
+
     status = models.CharField(max_length=50, default="pending")
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
 
 # =====================================================
-# Partner Contacts (Dynamic Supervisors / Managers)
+# Partner Contacts
 # =====================================================
 class PartnerContact(models.Model):
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, related_name="contacts")
@@ -120,7 +156,7 @@ class PartnerContact(models.Model):
 
 
 # =====================================================
-# Activity Logs for each partner
+# Activity Logs
 # =====================================================
 class PartnershipActivity(models.Model):
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, related_name="activities")
@@ -130,3 +166,32 @@ class PartnershipActivity(models.Model):
 
     def __str__(self):
         return f"{self.partner.company1} ({self.activity_date})"
+
+class SignupRequest(models.Model):
+    fullname = models.CharField(max_length=255)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=255)
+
+    role_requested = models.CharField(max_length=50)
+
+    college = models.ForeignKey(
+        College, null=True, blank=True, on_delete=models.SET_NULL
+    )
+    department = models.ForeignKey(
+        Department, null=True, blank=True, on_delete=models.SET_NULL
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", "Pending"),
+            ("approved", "Approved"),
+            ("declined", "Declined"),
+        ],
+        default="pending",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.fullname} ({self.role_requested}) - {self.status}"
