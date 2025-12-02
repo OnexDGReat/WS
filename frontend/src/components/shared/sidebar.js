@@ -8,7 +8,8 @@ import {
   Handshake,
   School,
   Users,
-  Phone
+  Phone,
+  Mail
 } from "lucide-react";
 
 import "./sidebar.css";
@@ -25,7 +26,7 @@ export default function Sidebar() {
       .catch(() => (window.location.href = "/login"));
   }, []);
 
-  // Base nav items visible to all roles
+  // Nav items visible to all
   const baseNavItems = [
     { name: "Dashboard", path: "/dashboard", icon: <ChartColumnBig /> },
     { name: "Partnerships", path: "/partnerships", icon: <Handshake /> },
@@ -34,10 +35,24 @@ export default function Sidebar() {
   ];
 
   // Users tab only for superadmin
-  const superadminNavItem = { name: "Users", path: "/users", icon: <Users /> };
+  const superadminUsersItem = {
+    name: "Users",
+    path: "/users",
+    icon: <Users />
+  };
 
-  // Combine nav items based on role
-  const navItems = user?.role === "superadmin" ? [...baseNavItems, superadminNavItem] : baseNavItems;
+  // Requests tab only for superadmin
+  const superadminRequestsItem = {
+    name: "Requests",
+    path: "/requests",
+    icon: <Mail />
+  };
+
+  // Build final nav items depending on role
+  const navItems =
+    user?.role === "superadmin"
+      ? [...baseNavItems, superadminRequestsItem, superadminUsersItem]
+      : baseNavItems;
 
   return (
     <div className={collapsed ? "sidebar collapsed" : "sidebar"}>
@@ -54,12 +69,10 @@ export default function Sidebar() {
       {/* header area */}
       <div className="sidebar-header">
 
-        {/* expanded sidebar */}
         {!collapsed && (
           <div className="logo-section">
             <img src="/hcdc_logo.png" alt="HCDC Logo" className="hcdc-logo" />
 
-            {/* user info directly under logo */}
             {user && (
               <div className="user-info under-logo">
                 <h3>{user.fullname}</h3>
@@ -74,7 +87,6 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* collapsed sidebar */}
         {collapsed && (
           <div className="logo-collapsed">
             <img src="/hcdc_logo.png" alt="HCDC Logo" className="hcdc-logo-small" />

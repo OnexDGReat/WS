@@ -167,31 +167,3 @@ class PartnershipActivity(models.Model):
     def __str__(self):
         return f"{self.partner.company1} ({self.activity_date})"
 
-class SignupRequest(models.Model):
-    fullname = models.CharField(max_length=255)
-    email = models.EmailField(unique=True)
-    password = models.CharField(max_length=255)
-
-    role_requested = models.CharField(max_length=50)
-
-    college = models.ForeignKey(
-        College, null=True, blank=True, on_delete=models.SET_NULL
-    )
-    department = models.ForeignKey(
-        Department, null=True, blank=True, on_delete=models.SET_NULL
-    )
-
-    status = models.CharField(
-        max_length=20,
-        choices=[
-            ("pending", "Pending"),
-            ("approved", "Approved"),
-            ("declined", "Declined"),
-        ],
-        default="pending",
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.fullname} ({self.role_requested}) - {self.status}"
