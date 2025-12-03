@@ -150,6 +150,23 @@
   top: 50%;
   transform: translateY(-50%);
 }
+.password-group {
+  position: relative;
+}
+
+.toggle-pass {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.toggle-pass:hover {
+  opacity: 1;
+}
+
 
 
 

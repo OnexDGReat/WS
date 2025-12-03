@@ -25,7 +25,15 @@ urlpatterns = [
     path('api/signup/', views.signup_view, name='signup'),
     path('api/login/', views.login_view, name='login'),
     path('api/current_user/', views.current_user, name='current_user'),
-    path('all_partners_api/', views.all_partners_api, name='all_partners_api'),
-    path("all_colleges_api/", views.all_colleges_api, name="all_colleges_api"),
-    path("users/", views.get_all_users, name="get_all_users"),
+    path("api/all_users/", views.all_users, name="get_all_users"),
+    path('api/get_all_users/', views.get_all_users, name='get_all_users'),
+
+
+
+    # PENDING USER REQUESTS
+    path("pending-users/", views.get_pending_requests, name="pending_users"),
+    path("pending-users/<int:user_id>/approve/", views.approve_request, name="approve_request"),
+    path("pending-users/<int:user_id>/decline/", views.decline_request, name="decline_request"),
+    # path('all_partners_api/', views.all_partners_api, name='all_partners_api'),
+    # path("all_colleges_api/", views.all_colleges_api, name="all_colleges_api"),
 ]

@@ -3,13 +3,22 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
-from rest_framework.decorators import api_view
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework import status
 from rest_framework.response import Response
 import json
-from .serializers import CollegeSerializer, DepartmentSerializer
 
-from .models import Partner, PartnerContact, PartnershipActivity, User, College, Department
+from .models import (
+    Partner,
+    PartnerContact,
+    PartnershipActivity,
+    User,
+    College,
+    Department,
+
+)
+
 from .serializers import (
     PartnerSerializer,
     PartnerContactSerializer,
@@ -18,12 +27,13 @@ from .serializers import (
     UserSerializer,
     CollegeSerializer,
     DepartmentSerializer,
-    UserSerializer
 )
+
 from .permissions import IsSuperAdmin
 
+
 # =====================================================
-# PARTNER CRUD API (Fully CSRF-compatible)
+# PARTNER CRUD
 # =====================================================
 class PartnerViewSet(viewsets.ModelViewSet):
     queryset = Partner.objects.all().order_by("-created_at")
@@ -41,8 +51,7 @@ class PartnershipActivityViewSet(viewsets.ModelViewSet):
 
 
 # =====================================================
-# CSRF COOKIE ENDPOINT
-# React must call this ONCE to receive a CSRF token.
+# CSRF TOKEN
 # =====================================================
 @ensure_csrf_cookie
 def get_csrf(request):
@@ -50,14 +59,14 @@ def get_csrf(request):
 
 
 # =====================================================
-# HOME TEST PAGE
+# HOME
 # =====================================================
 def home(request):
     return HttpResponse("Welcome to the OSA Partnership Monitoring System!")
 
 
 # =====================================================
-# Current User
+# CURRENT USER
 # =====================================================
 def current_user(request):
     if request.user.is_authenticated:
@@ -68,13 +77,52 @@ def current_user(request):
             "role": request.user.role,
             "college": request.user.college.name if request.user.college else None,
             "department": request.user.department.name if request.user.department else None,
+            "status": request.user.status,
         })
     return JsonResponse({"error": "Not logged in"}, status=401)
 
 
+# =====================================================
+# ALL USERS
+# =====================================================
+def all_users(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Not logged in"}, status=401)
+
+    # Optional: restrict only to superadmin
+    if request.user.role != "superadmin":
+        return JsonResponse({"error": "Unauthorized"}, status=403)
+
+    users = User.objects.all()
+    user_list = []
+    
+
+    for user in users:
+        user_list.append({
+            "id": user.id,
+            "email": user.email,
+            "fullname": user.fullname,
+            "role": user.role,
+            "college": user.college.name if hasattr(user, "college") and user.college else None,
+            "department": user.department.name if hasattr(user, "department") and user.department else None,
+            "status": getattr(user, "status", None),
+        })
+
+    return JsonResponse(user_list, safe=False)
 
 # =====================================================
-# SIGNUP
+# Fetch All Users API for Users List
+# =====================================================
+
+@api_view(["GET"])
+def get_all_users(request):
+    users = User.objects.filter(status="approved").order_by("fullname")
+    serializer = UserListSerializer(users, many=True)
+    return Response(serializer.data)
+
+
+# =====================================================
+# SIGNUP SYSTEM WITH APPROVAL FLOW
 # =====================================================
 @csrf_exempt
 def signup_view(request):
@@ -83,9 +131,8 @@ def signup_view(request):
 
     try:
         data = json.loads(request.body)
-
-        if User.objects.filter(email=data.get("email")).exists():
-            return JsonResponse({"success": False, "error": "User already exists"})
+        email = data.get("email")
+        role = data.get("role")
 
         college_id = data.get("college")
         department_id = data.get("department")
@@ -93,20 +140,62 @@ def signup_view(request):
         college = College.objects.get(id=college_id) if college_id else None
         department = Department.objects.get(id=department_id) if department_id else None
 
-        User.objects.create_user(
-            email=data.get("email"),
+        # Check if user already exists
+        existing_user = User.objects.filter(email=email).first()
+        if existing_user:
+            if existing_user.status == "declined":
+                # Reuse the declined account
+                existing_user.fullname = data.get("fullname", existing_user.fullname)
+                existing_user.set_password(data.get("password"))
+                existing_user.role = role
+                existing_user.college = college
+                existing_user.department = department
+                existing_user.status = "pending" if role not in ["student", "guest"] else "approved"
+                existing_user.is_active = True if role in ["student", "guest"] else False
+                existing_user.save()
+                return JsonResponse({
+                    "success": True,
+                    "message": "Account recreated successfully",
+                    "auto_approved": role in ["student", "guest"]
+                })
+            elif existing_user.status == "pending":
+                return JsonResponse({
+            "success": False,
+            "error": "This email already has a pending registration. Please wait for approval."
+        })
+            if existing_user.status == "approved":
+             return JsonResponse({
+            "success": False,
+            "error": "An approved account already exists for this email."
+        })
+            
+
+        # Determine approval for student and guest roles
+        auto_approve = role in ["student", "guest"]
+        status = "approved" if auto_approve else "pending"
+        is_active = True if auto_approve else False
+
+        # Create new user
+        user = User.objects.create_user(
+            email=email,
             password=data.get("password"),
             fullname=data.get("fullname", ""),
-            role=data.get("role"),
-            college_id=data.get("college") or None,
-            department_id=data.get("department") or None,
-)
+            role=role,
+            college=college,
+            department=department,
+            status=status,
+            is_active=is_active
+        )
 
-
-        return JsonResponse({"success": True})
+        return JsonResponse({
+            "success": True,
+            "message": "Account created",
+            "auto_approved": auto_approve
+        })
 
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)})
+
 
 
 
@@ -117,25 +206,60 @@ def signup_view(request):
 def login_view(request):
     if request.method != "POST":
         return JsonResponse({"success": False, "error": "Invalid method"}, status=400)
+
     try:
         data = json.loads(request.body)
-        user = authenticate(
-            request,
-            username=data.get("email"),
-            password=data.get("password")
-        )
-        if user:
-            login(request, user)
+        email = data.get("email")
+        password = data.get("password")
+
+
+
+        # Check if user exists
+        try:
+            user_obj = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Account not found"})
+
+        # Authenticate
+        user = authenticate(request, username=email, password=password)
+        if not user:
+            return JsonResponse({"success": False, "error": "Invalid credentials or Still pending"})
+
+        # Prepare user info
+        user_data = {
+            "id": user.id,
+            "email": user.email,
+            "fullname": user.fullname,
+            "role": user.role,
+            "college": user.college.name if user.college else None,
+            "department": user.department.name if user.department else None,
+            "status": user.status,
+        }
+
+        # Handle status
+        if user.status == "pending":
             return JsonResponse({
-                "success": True,
-                "id": user.id,
-                "email": user.email,
-                "fullname": user.fullname,
-                "position": getattr(user, "position", "")
+                "success": False,
+                "error": "Your account is still pending approval. Please wait!",
+                "user": user_data
             })
-        return JsonResponse({"success": False, "error": "Invalid credentials"})
+        elif user.status == "declined":
+            return JsonResponse({
+                "success": False,
+                "error": "Your account request was declined.",
+                "user": user_data
+            })
+
+        # Only login approved users
+        if user.status == "approved":
+            login(request, user)
+            return JsonResponse({"success": True, "user": user_data})
+
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)})
+
+
+
 
 
 # =====================================================
@@ -151,103 +275,65 @@ def logout_view(request):
 
 
 # =====================================================
-# BROWSER-FRIENDLY PARTNERSHIP PAGE
+# REQUESTS PAGE — admin account approvals
 # =====================================================
-def all_partners_page(request):
-    """
-    View to see all partnerships in a simple HTML table in the browser.
-    """
-    partners = Partner.objects.all().order_by("-created_at")
-    return render(request, 'partners/all_partners.html', {'partners': partners})
-
-
-# =====================================================
-# SIMPLE JSON API FOR FRONTEND CHECK
-# =====================================================
-@api_view(['GET'])
-def all_partners_api(request):
-    partners = Partner.objects.all().order_by("-created_at")
-    serializer = PartnerSerializer(partners, many=True)
-    return Response(serializer.data)
-
-# Browser-friendly page for testing CRUD
-def all_partners_page(request):
-    partners = Partner.objects.all().order_by("-created_at")
-    return render(request, "partners/all_partners.html", {"partners": partners})
-
-# =====================================================
-# GET ALL COLLEGES WITH PARTNERS
-# =====================================================
-def all_colleges_api(request):
-    """
-    Returns all colleges with their associated partners.
-    Example output:
-    [
-        {
-            "id": 1,
-            "college": "CET - IT",
-            "partners": "JairoSoft and Dusit"
-        },
-        {
-            "id": 2,
-            "college": "CHATME",
-            "partners": "Smart"
-        }
-    ]
-    """
-    colleges = Department.objects.all()
-    result = []
-
-    for college in colleges:
-        partners_qs = Partner.objects.filter(category=college.name)  # category stores college name
-        partners_names = [p.company1 for p in partners_qs]
-        # Combine partners with 'and' if more than one
-        if len(partners_names) > 1:
-            partners_str = " and ".join(partners_names)
-        elif partners_names:
-            partners_str = partners_names[0]
-        else:
-            partners_str = ""  # no partners yet
-
-        result.append({
-            "id": college.id,
-            "college": college.name,
-            "partners": partners_str,
-        })
-
-    return JsonResponse(result, safe=False)
-
-@api_view(['GET'])
-def get_colleges(request):
-    colleges = College.objects.all()
-    serializer = CollegeSerializer(colleges, many=True)
-    return Response(serializer.data)
-
-@api_view(['GET'])
-def get_courses(request):
-    college_id = request.GET.get('college_id')
-    if not college_id:
-        return Response([], status=200)
-    courses = Department.objects.filter(college_id=college_id)
-    serializer = DepartmentSerializer(courses, many=True)
-    return Response(serializer.data)
-
 @api_view(["GET"])
-def get_all_users(request):
-    users = User.objects.all().order_by("fullname")
-    serializer = UserListSerializer(users, many=True)
+def get_pending_requests(request):
+    if not request.user.is_authenticated or request.user.role != "superadmin":
+        return Response({"detail": "Not authorized"}, status=403)
+
+    pending = User.objects.filter(status="pending").order_by("fullname")
+    serializer = UserListSerializer(pending, many=True)
     return Response(serializer.data)
 
+
+@api_view(["POST"])
+def approve_request(request, user_id):
+    if not request.user.is_authenticated or request.user.role != "superadmin":
+        return Response({"detail": "Not authorized"}, status=403)
+
+    try:
+        user = User.objects.get(id=user_id)
+        user.status = "approved"
+        user.is_active = True
+        user.save()
+        return Response({"success": True, "message": "User approved"})
+    except User.DoesNotExist:
+        return Response({"success": False, "error": "User not found"}, status=404)
+
+
+@api_view(["POST"])
+def decline_request(request, user_id):
+    if not request.user.is_authenticated or request.user.role != "superadmin":
+        return Response({"detail": "Not authorized"}, status=403)
+
+    try:
+        user = User.objects.get(id=user_id)
+        # Mark as declined and deactivate account
+        user.status = "declined"
+        user.is_active = False
+
+        # Modify email so original email is free for new registration
+        user.email = f"{user.email}"
+
+        user.save()
+        return Response({"success": True, "message": "User declined, email released for future registration"})
+    except User.DoesNotExist:
+        return Response({"success": False, "error": "User not found"}, status=404)
+
+
+
 # =====================================================
-# USERS CRUD (Superadmin only)
+# USERS CRUD (Superadmin Only)
 # =====================================================
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all().order_by("-id")
+    queryset = User.objects.filter(status="approved").order_by('fullname')
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsSuperAdmin]
 
+
 # =====================================================
-# Colleges list
+# COLLEGES & DEPARTMENTS
 # =====================================================
 @api_view(["GET"])
 def college_list(request):
@@ -256,9 +342,6 @@ def college_list(request):
     return Response(serializer.data)
 
 
-# =====================================================
-# Departments list filtered by college
-# =====================================================
 @api_view(["GET"])
 def department_list(request):
     college_id = request.GET.get("college_id")
@@ -269,14 +352,39 @@ def department_list(request):
     serializer = DepartmentSerializer(departments, many=True)
     return Response(serializer.data)
 
+# Only superadmins can access
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def pending_users(request):
+    if request.user.role != "superadmin":
+        return Response({"detail": "Not authorized"}, status=403)
+
+    pending = User.objects.filter(is_pending=True).order_by("fullname")
+    serializer = UserListSerializer(pending, many=True)
+    return Response(serializer.data)
 
 # =====================================================
-# Users list for superadmin only
+# DECLINED USERS LIST & DELETE
 # =====================================================
-@api_view(["GET"])
-def user_list(request):
-    if not request.user.is_authenticated or request.user.role != "superadmin":
-        return Response({"detail": "Not authorized"}, status=403)
-    users = User.objects.all().order_by("fullname")
-    serializer = UserListSerializer(users, many=True)
-    return Response(serializer.data)
+@api_view(['GET'])
+def declined_users_list(request):
+    declined_users = User.objects.filter(status="declined")
+    data = [{
+        "id": u.id,
+        "fullname": u.fullname,
+        "email": u.email,
+        "role": u.role,
+        "college": u.college.name if u.college else None,
+        "department": u.department.name if u.department else None,
+    } for u in declined_users]
+    return Response(data)
+
+@api_view(['DELETE'])
+@permission_classes([IsAdminUser])
+def delete_user(request, pk):
+    try:
+        user = User.objects.get(pk=pk, status="declined")
+        user.delete()
+        return Response({"message": "User deleted successfully."}, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response({"error": "User not found or not declined."}, status=status.HTTP_404_NOT_FOUND)

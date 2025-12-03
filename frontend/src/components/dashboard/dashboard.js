@@ -1,65 +1,65 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../shared/sidebar";
 import Navbar from "../shared/navbar";
+import axiosInstance from "../../api/axiosConfig";
 import "./dashboard.css";
 
-export default function Dashboard() {
+const Dashboard = () => {
+  const [partners, setPartners] = useState([]);
+
+  useEffect(() => {
+    // Fetch all partnerships
+    axiosInstance.get("/partners/")
+      .then((res) => setPartners(res.data))
+      .catch(console.log);
+  }, []);
+
+  // Calculate stats
+  const totalPartnerships = partners.length;
+  const activePartnerships = partners.filter(p => p.status.toLowerCase() === "active").length;
+  const expiringSoon = partners.filter(p => {
+    if (!p.effectivity_end) return false;
+    const endDate = new Date(p.effectivity_end);
+    const now = new Date();
+    const diffDays = (endDate - now) / (1000 * 60 * 60 * 24);
+    return diffDays > 0 && diffDays <= 30; // expiring within 30 days
+  }).length;
+  const expired = partners.filter(p => p.status.toLowerCase() === "expired").length;
+
   return (
-    <div className="dashboard-container">
+    <div className="page-container">
       <Navbar />
       <Sidebar />
+
       <div className="content">
-        {/* Add top margin to avoid overlap with navbar */}
         <div className="page-header">
           <h1>Dashboard</h1>
         </div>
 
-        {/* STAT CARDS - ready for dynamic data */}
         <div className="cards-row">
           <div className="card">
             <h3>Total Partnerships</h3>
-            <p>0</p>
+            <p>{totalPartnerships}</p>
           </div>
 
           <div className="card">
             <h3>Active Partnerships</h3>
-            <p>0</p>
+            <p>{activePartnerships}</p>
           </div>
 
           <div className="card">
             <h3>Expiring Soon</h3>
-            <p>0</p>
+            <p>{expiringSoon}</p>
           </div>
 
           <div className="card">
             <h3>Expired</h3>
-            <p>0</p>
+            <p>{expired}</p>
           </div>
-        </div>
-
-        {/* TABLE - ready for dynamic data */}
-        <div className="table-container">
-          <table className="dash-table">
-            <thead>
-              <tr>
-                <th>Company/Department 1</th>
-                <th>Company/Department 2</th>
-                <th>Date Started</th>
-                <th>Due Date</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td colSpan="6" style={{ textAlign: "center", padding: "20px" }}>
-                  No data available
-                </td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default Dashboard;

@@ -36,6 +36,8 @@ class UserManager(BaseUserManager):
         role="user",
         college=None,
         department=None,
+        status="pending",
+        is_active=False,
         **extra_fields
     ):
         if not email:
@@ -43,13 +45,13 @@ class UserManager(BaseUserManager):
 
         email = self.normalize_email(email)
 
-        # Default fallback values
+        # Defaults for users without college/department
         if college is None:
-            college, _ = College.objects.get_or_create(name="Not mentioned")
+            college, _ = College.objects.get_or_create(name="N/A")
 
         if department is None:
             department, _ = Department.objects.get_or_create(
-                name="Not mentioned",
+                name="N/A",
                 college=college
             )
 
@@ -59,6 +61,8 @@ class UserManager(BaseUserManager):
             role=role,
             college=college,
             department=department,
+            status=status,
+            is_active=is_active,
             **extra_fields
         )
 
@@ -74,6 +78,8 @@ class UserManager(BaseUserManager):
             email=email,
             password=password,
             role="superadmin",
+            status="approved",
+            is_active=True,
             **extra_fields
         )
 
@@ -91,19 +97,29 @@ class User(AbstractBaseUser, PermissionsMixin):
         ("guest", "Guest"),
     )
 
+    STATUS_CHOICES = (
+        ("pending", "Pending"),
+        ("approved", "Approved"),
+        ("declined", "Declined"),
+    )
+
     email = models.EmailField(unique=True)
     fullname = models.CharField(max_length=255, blank=True)
 
-    # Role-based access
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="user")
 
-    # Academic attribution
     college = models.ForeignKey(College, on_delete=models.SET_NULL, null=True, blank=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
 
-    username = None  # we are using email as username
-    is_active = models.BooleanField(default=True)
+    # Email = username
+    username = None
+
+    # For login access
+    is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
+
+    # Request system
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
 
     objects = UserManager()
 
@@ -166,4 +182,3 @@ class PartnershipActivity(models.Model):
 
     def __str__(self):
         return f"{self.partner.company1} ({self.activity_date})"
-

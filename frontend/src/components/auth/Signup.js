@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './AuthForm.css';
 import axios from "../../api/axiosConfig";
-import { User, Mail, Briefcase, Lock } from "lucide-react";
+import { User, Mail, Briefcase, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Signup = () => {
@@ -15,10 +15,12 @@ const Signup = () => {
   const [departmentsList, setDepartmentsList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showPass, setShowPass] = useState(false);
+
 
   const navigate = useNavigate();
 
-  // Fetch all colleges on mount
+  // Fetch colleges on mount
   useEffect(() => {
     axios.get("/colleges/")
       .then(res => setCollegesList(res.data))
@@ -45,14 +47,14 @@ const Signup = () => {
     setLoading(true);
     setErrorMsg('');
 
-    // Build payload depending on role
+    // Determine payload
     const payload = {
       fullname,
       email,
       password,
       role: position,
-      college: (position === 'superadmin') ? null : college || null,
-      department: (position === 'department_admin') ? department || null : null,
+      college: (position === "student" || position === "college_admin" || position === "department_admin") ? college || null : null,
+      department: (position === "student" || position === "department_admin") ? department || null : null,
     };
 
     try {
@@ -63,10 +65,24 @@ const Signup = () => {
       );
 
       if (response.data.success) {
-        alert("Signup request sent! Superadmin will review your request.");
+        // Auto-approved users
+        if (position === 'student' || position === 'guest') {
+          alert("Account created! You can now login.");
+        } else {
+          alert("Signup request sent! Superadmin will review your request.");
+        }
         navigate("/login");
       } else {
-        setErrorMsg(response.data.error || "Signup failed");
+        // Handle email previously declined
+      if (response.data.error?.includes("declined")) {
+          alert("This email was previously declined. You can register again.");
+        }
+        else if (response.data.error?.includes("pending")) {
+          alert("Your registration is still pending approval.");
+        }
+        else {
+          setErrorMsg(response.data.error || "Signup failed");
+        }
       }
     } catch (error) {
       console.error("Signup error:", error.response?.data || error.message);
@@ -112,8 +128,8 @@ const Signup = () => {
               </select>
             </div>
 
-            {/* College dropdown for College / Department Admin */}
-            {(position === 'college_admin' || position === 'department_admin') && (
+            {/* College dropdown for applicable roles */}
+            {(position === 'college_admin' || position === 'department_admin' || position === 'student') && (
               <div className="input-group">
                 <Briefcase className="input-icon" />
                 <select value={college} onChange={e => setCollege(e.target.value)} required>
@@ -123,8 +139,8 @@ const Signup = () => {
               </div>
             )}
 
-            {/* Department dropdown for Department Admin */}
-            {position === 'department_admin' && (
+            {/* Department dropdown for department_admin and students */}
+            {(position === 'department_admin' || position === 'student') && (
               <div className="input-group">
                 <Briefcase className="input-icon" />
                 <select value={department} onChange={e => setDepartment(e.target.value)} required disabled={!college}>
@@ -133,11 +149,20 @@ const Signup = () => {
                 </select>
               </div>
             )}
+<div className="input-group password-group">
+  <Lock className="input-icon" />
+  <input
+    type={showPass ? "text" : "password"}
+    placeholder="Password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    required
+  />
+  <span className="toggle-pass" onClick={() => setShowPass(!showPass)}>
+    {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
+  </span>
+</div>
 
-            <div className="input-group">
-              <Lock className="input-icon" />
-              <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required />
-            </div>
 
             <button type="submit" disabled={loading}>
               {loading ? "Signing up..." : "Sign Up"}

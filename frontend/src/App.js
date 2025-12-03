@@ -10,6 +10,7 @@ import Reports from "./components/reports/reports";
 import Contacts from "./components/contact/contact";
 import Users from "./components/users/users";
 import Requests from "./components/requests/requests";
+import DeclinedUsers from "./components/declinedusers/declinedusers";
 
 
 import AddPartnership from "./components/partnerships/add_partnership";
@@ -28,6 +29,7 @@ function App() {
         <Route path="/contact" element={<Contacts />} />
         <Route path="/users" element={<Users />} />
         <Route path="/requests" element={<Requests />} />
+        <Route path="/declined-users" element={<DeclinedUsers />} />
 
 
         {/* NEW ROUTES HERE */}

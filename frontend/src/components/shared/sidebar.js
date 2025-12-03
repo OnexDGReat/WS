@@ -47,11 +47,18 @@ export default function Sidebar() {
     path: "/requests",
     icon: <Mail />
   };
+  
+  const superadminDeclinedItem = {
+  name: "Declined Users",
+  path: "/declined-users",
+  icon: <Users />
+};
+
 
   // Build final nav items depending on role
   const navItems =
     user?.role === "superadmin"
-      ? [...baseNavItems, superadminRequestsItem, superadminUsersItem]
+      ? [...baseNavItems, superadminRequestsItem, superadminUsersItem, superadminDeclinedItem]
       : baseNavItems;
 
   return (
@@ -78,8 +85,8 @@ export default function Sidebar() {
                 <h3>{user.fullname}</h3>
                 <p>
                   {user.role === "superadmin" && "Superadmin"}
-                  {user.role === "college_admin" && `${user.college?.name || "College"} Admin`}
-                  {user.role === "department_admin" && `${user.department?.name || "Department"} Admin`}
+                {user?.role === "college_admin" && `${user.college} Admin`}
+                {user?.role === "department_admin" && `${user.department} Admin`}
                   {(user.role === "user" || user.role === "guest") && "User"}
                 </p>
               </div>
