@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../shared/sidebar";
-import Table from "../shared/table";
 import Navbar from "../shared/navbar";
 import axiosInstance from "../../api/axiosConfig";
 import "./colleges.css";
@@ -15,52 +14,35 @@ const Colleges = () => {
       .catch((err) => console.log(err));
   }, []);
 
-  const handleDelete = (id) => {
-    if (!window.confirm("Are you sure you want to delete this college?")) return;
-    // Add API call here if needed
-    setColleges((prev) => prev.filter((c) => c.id !== id));
-  };
+  return (
+    <div className="page-container">
+      <Navbar />
+      <Sidebar />
 
-  const columns = [
-    { header: "College", accessor: "college" },
-    { header: "Partner Companies", accessor: "partners" },
-    {
-      header: "Actions",
-      accessor: "actions",
-      render: (row) => (
-        <div className="actions">
-          <a href={`/view-college/${row.id}`} className="view-btn">
-            View
-          </a>
-          <a href={`/edit-college/${row.id}`} className="edit-btn">
-            Edit
-          </a>
-          <button
-            onClick={() => handleDelete(row.id)}
-            className="delete-btn"
-          >
-            Delete
-          </button>
+      <div className="content">
+        <div className="page-header">
+          <h1>Colleges</h1>
         </div>
-      ),
-    },
-  ];
 
-return (
-  <div className="page-container">
-    <Navbar />
-    <Sidebar />
-    <div className="content">
-      {/* Add top margin to avoid overlap with navbar */}
-      <div className="page-header">
-        <h1>Colleges</h1>
+        <div className="cards-container">
+          {colleges.length ? (
+            colleges.slice(0, 8).map((college) => (
+              <div className="college-card" key={college.id}>
+                <img
+                  src="/hcdc_logo.png"
+                  alt={college.name || "Logo"}
+                  className="college-logo"
+                />
+                <h3 className="college-title">{college.name || "Title"}</h3>
+              </div>
+            ))
+          ) : (
+            <p>No colleges found</p>
+          )}
+        </div>
       </div>
-
-      <Table data={colleges} columns={columns} />
     </div>
-  </div>
-);
-
+  );
 };
 
 export default Colleges;
