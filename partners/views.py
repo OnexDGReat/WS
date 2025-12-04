@@ -9,6 +9,17 @@ from rest_framework import status
 from rest_framework.response import Response
 import json
 
+def get_departments(request):
+    college_id = request.GET.get('college_id')
+    if not college_id:
+        return JsonResponse([], safe=False)
+    
+    try:
+        departments = Department.objects.filter(college_id=college_id).values('id', 'name')
+        return JsonResponse(list(departments), safe=False)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
 from .models import (
     Partner,
     PartnerContact,

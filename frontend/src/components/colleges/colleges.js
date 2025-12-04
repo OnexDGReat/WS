@@ -26,22 +26,13 @@ const Colleges = () => {
     { header: "Partner Companies", accessor: "partners" },
     {
       header: "Actions",
-      accessor: "actions",
-      render: (row) => (
-        <div className="actions">
-          <a href={`/view-college/${row.id}`} className="view-btn">
-            View
-          </a>
-          <a href={`/edit-college/${row.id}`} className="edit-btn">
-            Edit
-          </a>
-          <button
-            onClick={() => handleDelete(row.id)}
-            className="delete-btn"
-          >
-            Delete
-          </button>
-        </div>
+  accessor: "actions",
+  render: (row) => (
+    <div className="actions">
+      <a href={`/view-college/${row.id}`} className="action-btn view-btn">View</a>
+      <a href={`/edit-college/${row.id}`} className="action-btn edit-btn">Edit</a>
+      <button onClick={() => handleDelete(row.id)} className="action-btn delete-btn">Delete</button>
+    </div>
       ),
     },
   ];

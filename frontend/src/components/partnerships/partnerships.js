@@ -50,13 +50,13 @@ const Partnerships = () => {
     },
     {
       header: "Actions",
-      accessor: "actions",
-      render: (row) => (
-        <div className="actions">
-          <button className="view-btn" onClick={() => openModal(row)}>View</button>
-          <a href={`/edit-partnership/${row.id}`} className="edit-btn">Edit</a>
-          <button onClick={() => handleDelete(row.id)} className="delete-btn">Delete</button>
-        </div>
+  accessor: "actions",
+  render: (row) => (
+    <div className="actions">
+      <button className="action-btn view-btn" onClick={() => openModal(row)}>View</button>
+      <a href={`/edit-partnership/${row.id}`} className="action-btn edit-btn">Edit</a>
+      <button onClick={() => handleDelete(row.id)} className="action-btn delete-btn">Delete</button>
+    </div>
       ),
     },
   ];

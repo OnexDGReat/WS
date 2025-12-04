@@ -307,3 +307,51 @@ tbody tr:hover {
     padding: 20px;
   }
 }
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+.view-btn {
+  background-color: #10b981;
+  color: white;
+}
+
+.view-btn:hover {
+  background-color: #059669;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.edit-btn {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.edit-btn:hover {
+  background-color: #2563eb;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.delete-btn {
+  background-color: #ef4444;
+  color: white;
+}
+
+.delete-btn:hover {
+  background-color: #dc2626;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}

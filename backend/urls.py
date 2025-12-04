@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/current_user/', views.current_user, name='current_user'),
     path("api/all_users/", views.all_users, name="get_all_users"),
     path('api/get_all_users/', views.get_all_users, name='get_all_users'),
+    path('api/departments/', views.get_departments, name='get_departments'),
 
 
 
